@@ -35,6 +35,31 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Restore cached API key from localStorage on mount
+  useEffect(() => {
+    const cached = localStorage.getItem('airelay_admin_key');
+    if (cached) {
+      setApiKey(cached);
+      // Auto-login with cached key
+      setAuthenticated(true);
+      fetch('/api/admin', {
+        headers: { Authorization: `Bearer ${cached}` },
+      })
+        .then((res) => {
+          if (res.status === 401) {
+            localStorage.removeItem('airelay_admin_key');
+            setAuthenticated(false);
+          }
+          return res.json();
+        })
+        .then((json) => setData(json))
+        .catch(() => {
+          localStorage.removeItem('airelay_admin_key');
+          setAuthenticated(false);
+        });
+    }
+  }, []);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -50,6 +75,7 @@ export default function AdminPage() {
       const json = await res.json();
       setData(json);
       setAuthenticated(true);
+      localStorage.setItem('airelay_admin_key', apiKey);
     } catch (e) {
       setError('Failed to fetch admin data');
     } finally {

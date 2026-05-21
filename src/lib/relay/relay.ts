@@ -68,8 +68,13 @@ export async function relayRequest(
   const isAnthropic = provider.headerFormat === 'anthropic';
 
   // Transform request body if needed (use resolved model name)
-  const bodyWithResolvedModel = { ...body, model: resolvedModel };
-  const requestBody = isAnthropic ? transformToAnthropic(bodyWithResolvedModel) : bodyWithResolvedModel;
+  // Inject stream_options.include_usage for streaming so upstream returns usage in final SSE chunk
+  const bodyWithResolvedModel: Record<string, unknown> = { ...body, model: resolvedModel };
+  if (body.stream && !isAnthropic) {
+    const existingOpts = typeof body.stream_options === 'object' && body.stream_options !== null ? body.stream_options : {};
+    bodyWithResolvedModel.stream_options = { include_usage: true, ...existingOpts };
+  }
+  const requestBody = isAnthropic ? transformToAnthropic(bodyWithResolvedModel as ChatCompletionRequest) : bodyWithResolvedModel;
 
   // Retry with key rotation + exponential backoff
   const pool = getKeyPool(provider);
@@ -140,8 +145,9 @@ export async function relayRequest(
       // Success → record in rate limiter
       recordSuccess(provider.name);
 
-      // Track usage asynchronously (non-streaming only)
+      // Track usage asynchronously
       if (!body.stream && upstreamResponse.ok) {
+        // Non-streaming: parse JSON response directly
         trackUsageAsync(currentKey, upstreamResponse.clone(), provider.name, body.model, latencyMs);
       }
 
