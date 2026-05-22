@@ -6,7 +6,8 @@ import { NextRequest } from 'next/server';
 import { getRelayApiKeys } from '@/lib/relay';
 import { KVUsageStorage } from '@/lib/usage';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const maxDuration = 30;
 
 const usageStorage = new KVUsageStorage();
 
