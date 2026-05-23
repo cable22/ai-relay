@@ -40,6 +40,26 @@
 - **Virtual Model Mapping** — Map virtual model names to real models
 - **One-Click Deploy** — Deploy to Vercel in under 2 minutes
 
+### 📸 Screenshots
+
+**Admin Dashboard — Overview**
+
+![Admin Dashboard Overview](docs/screenshots/admin-overview.png)
+
+Quota status, daily usage stats, and token consumption trends at a glance.
+
+**Admin Dashboard — Key Management**
+
+![Admin Dashboard Key Management](docs/screenshots/admin-keys.png)
+
+Multi-provider key pool with status indicators and model prefix mapping.
+
+**Admin Dashboard — Tools**
+
+![Admin Dashboard Tools](docs/screenshots/admin-tools.png)
+
+Temporary key generation and model connectivity testing.
+
 ### 🚀 Quick Start
 
 #### One-Click Deploy (Recommended)
@@ -252,6 +272,26 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - **健康检查** — `/health` 端点用于监控
 - **虚拟模型映射** — 将虚拟模型名映射到真实模型
 - **一键部署** — 2 分钟内部署到 Vercel
+
+### 📸 截图展示
+
+**管理后台 — 运行概览**
+
+![管理后台运行概览](docs/screenshots/admin-overview.png)
+
+限额状态、今日消耗概览、Token 消耗趋势一目了然。
+
+**管理后台 — 密钥管理**
+
+![管理后台密钥管理](docs/screenshots/admin-keys.png)
+
+多服务商密钥池，带状态指示和模型前缀映射。
+
+**管理后台 — 辅助工具**
+
+![管理后台辅助工具](docs/screenshots/admin-tools.png)
+
+临时密钥生成和模型连通性测试。
 
 ### 🚀 快速开始
 
