@@ -20,17 +20,24 @@
 >
 > AI Relay runs on Vercel Edge Runtime. Click **Deploy with Vercel**, set 3 environment variables, and get your own serverless AI API relay gateway for OpenAI, Claude, DeepSeek, and custom providers.
 
+| What you care about | AI Relay's answer |
+|---|---|
+| **How do I deploy it?** | Click Deploy with Vercel, set 3 environment variables, and launch in about 2 minutes |
+| **Do I need a server?** | No VPS, no Docker, no backend operations |
+| **Can it start free?** | Built for Vercel Edge + KV, friendly to personal and small-team free-tier usage |
+| **Is integration hard?** | Keep the OpenAI SDK, change only `base_url`, and keep using `/v1/chat/completions` |
+
 ## Table of Contents
 
 - [Features](#-features)
 - [One-Click Deploy: Launch Your AI API Gateway in 2 Minutes](#-one-click-deploy-launch-your-ai-api-gateway-in-2-minutes)
+- [Comparison](#-comparison-with-similar-projects)
 - [Why AI Relay?](#why-ai-relay)
 - [Usage](#-usage)
 - [Configuration](#-configuration)
 - [Architecture](#-architecture)
 - [Admin Dashboard](#-admin-dashboard)
 - [Notifications & Alerts](#-notifications--alerts)
-- [Comparison](#-comparison-with-similar-projects)
 - [Use Cases](#-use-cases)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -105,6 +112,22 @@ npm run dev  # http://localhost:3000
 ```
 
 </details>
+
+## 🏁 Comparison with Similar Projects
+
+| Feature | AI Relay | OpenRouter | OneAPI / new-api | FastGPT |
+|---------|----------|------------|------------------|---------|
+| **Deployment** | **Vercel one-click deploy (Edge)** | SaaS only | Self-hosted (Docker) | Self-hosted (Docker) |
+| **Infra Cost** | **No server required; free-tier friendly** | Pay-per-use | Requires server | Requires server |
+| **Cold Start** | < 50ms | N/A | Seconds | Seconds |
+| **Circuit Breaker** | ✅ | ❌ | ❌ | ❌ |
+| **Fallback Chains** | ✅ Configurable | ✅ Auto | ✅ Basic | ✅ Basic |
+| **Concurrency** | ✅ Token bucket + queue | Rate-limited | ❌ | ❌ |
+| **Webhook Alerts** | ✅ 4 platforms | ❌ | ❌ | ✅ |
+| **Temp API Keys** | ✅ HMAC signed | ❌ | ✅ | ✅ |
+| **Primary Use Case** | Personal / small team | API marketplace | Multi-key mgmt | Knowledge base + API |
+
+**Choose AI Relay:** when you want a self-controlled AI API gateway without buying servers, maintaining Docker, or operating backend services. AI Relay gives you serverless deployment, a 2-minute setup path, multi-provider failover, and low-latency Edge runtime.
 
 ## Why AI Relay?
 
@@ -247,22 +270,6 @@ Push daily usage reports and quota alerts via Webhooks.
 **Daily Reports:** Sent via Vercel Cron with daily totals, per-provider breakdown, and day-over-day comparison.
 
 **Quota Alerts:** Per-provider or global thresholds for requests / tokens.
-
-## 🏁 Comparison with Similar Projects
-
-| Feature | AI Relay | OpenRouter | OneAPI / new-api | FastGPT |
-|---------|----------|------------|------------------|---------|
-| **Deployment** | Vercel one-click (Edge) | SaaS only | Self-hosted (Docker) | Self-hosted (Docker) |
-| **Infra Cost** | Free | Pay-per-use | Requires server | Requires server |
-| **Cold Start** | < 50ms | N/A | Seconds | Seconds |
-| **Circuit Breaker** | ✅ | ❌ | ❌ | ❌ |
-| **Fallback Chains** | ✅ Configurable | ✅ Auto | ✅ Basic | ✅ Basic |
-| **Concurrency** | ✅ Token bucket + queue | Rate-limited | ❌ | ❌ |
-| **Webhook Alerts** | ✅ 4 platforms | ❌ | ❌ | ✅ |
-| **Temp API Keys** | ✅ HMAC signed | ❌ | ✅ | ✅ |
-| **Primary Use Case** | Personal / small team | API marketplace | Multi-key mgmt | Knowledge base + API |
-
-**Choose AI Relay:** Zero-cost, serverless, 2-minute deploy, multi-provider failover, Edge low-latency.
 
 ## 🎯 Use Cases
 
