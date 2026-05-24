@@ -11,10 +11,15 @@ import { getAllProviders } from '@/lib/providers';
 export const runtime = 'edge';
 
 const usageStorage = new KVUsageStorage();
+let cachedStatus: { expiresAt: number; response: unknown } | null = null;
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const showDetails = url.searchParams.get('detail') === '1';
+
+  if (!showDetails && cachedStatus && Date.now() < cachedStatus.expiresAt) {
+    return Response.json(cachedStatus.response);
+  }
 
   const allProviders = await getAllProviders();
   await initAllKeyPools(allProviders);
@@ -35,10 +40,16 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return Response.json({
+  const payload = {
     status: 'ok',
     timestamp: new Date().toISOString(),
     providers,
     usage: globalUsage || { requests: 0, tokens: 0 },
-  });
+  };
+
+  if (!showDetails) {
+    cachedStatus = { response: payload, expiresAt: Date.now() + 30_000 };
+  }
+
+  return Response.json(payload);
 }

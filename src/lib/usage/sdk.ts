@@ -96,7 +96,7 @@ export interface UsageStorage {
     global: TrendPoint[];
     providers: ProviderTrendPoint[];
   }>;
-  checkQuota(): Promise<QuotaStatus>;
+  checkQuota(reserve?: boolean): Promise<QuotaStatus>;
 }
 
 export interface TrendPoint {

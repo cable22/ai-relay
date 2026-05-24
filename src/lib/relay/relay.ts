@@ -28,8 +28,8 @@ function recordError(
   keyHash: string,
   statusCode: number,
   reason: string
-): void {
-  usageStorage.recordError({ provider, keyHash, statusCode, reason }).catch(() => {});
+): Promise<void> {
+  return usageStorage.recordError({ provider, keyHash, statusCode, reason });
 }
 
 /**

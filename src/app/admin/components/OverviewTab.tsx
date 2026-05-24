@@ -366,6 +366,9 @@ export default function OverviewTab({
                 {/* Per-key breakdown */}
                 {p.keyErrors && p.keyErrors.length > 0 && (
                   <div style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: '#9ca3af', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                      {lang === 'zh' ? 'Key 错误原因明细为采样数据；Provider 错误总数为全量统计。' : 'Per-key error reasons are sampled; provider error totals are complete.'}
+                    </div>
                     {p.keyErrors.map((ke) => (
                       <div key={ke.keyHash} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', padding: '0.4rem', borderRadius: '6px', background: 'rgba(255,255,255,0.01)' }}>
                         <span style={{ fontFamily: 'monospace', color: '#f3f4f6', backgroundColor: '#1f2937', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.06)' }}>

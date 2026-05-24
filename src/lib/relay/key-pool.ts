@@ -12,9 +12,16 @@ const cooldowns = new Map<string, number>();
 
 const COOLDOWN_MS = 60_000; // 60s cooldown after 429/5xx
 
-/** Last-resort refresh interval for managed keys (5 min) */
-const MANAGED_KEY_REFRESH_MS = 300_000;
-const lastManagedRefresh = new Map<string, number>();
+/** Version check interval for managed keys. Full key lists are fetched only when the version changes. */
+const DEFAULT_KEY_VERSION_CHECK_TTL_MS = 30_000;
+const lastManagedVersionCheck = new Map<string, number>();
+const knownManagedVersions = new Map<string, number>();
+
+function keyVersionCheckTtlMs(): number {
+  const raw = Number(process.env.RELAY_KEY_POOL_VERSION_CHECK_TTL_MS || DEFAULT_KEY_VERSION_CHECK_TTL_MS);
+  if (!Number.isFinite(raw) || raw < 1_000) return DEFAULT_KEY_VERSION_CHECK_TTL_MS;
+  return raw;
+}
 
 /**
  * Hash a key to a short identifier (for KV storage / logging).
@@ -48,10 +55,10 @@ function parseKeys(envValue: string | undefined, provider: string): ApiKey[] {
  * Try to load managed keys from admin KV config.
  * Returns null if KV is not configured or no managed keys exist.
  */
-async function loadManagedKeys(providerName: string): Promise<ApiKey[] | null> {
+async function loadManagedKeys(providerName: string, forceRefresh = false): Promise<ApiKey[] | null> {
   try {
     const { getManagedKeys } = await import('../admin/admin-config');
-    const managed = await getManagedKeys(providerName);
+    const managed = await getManagedKeys(providerName, forceRefresh);
     if (managed !== null) {
       return managed.map((key) => ({
         key,
@@ -63,6 +70,15 @@ async function loadManagedKeys(providerName: string): Promise<ApiKey[] | null> {
     // admin-config not available or KV not configured
   }
   return null;
+}
+
+async function loadManagedKeysVersion(providerName: string): Promise<number> {
+  try {
+    const { getManagedKeysVersion } = await import('../admin/admin-config');
+    return await getManagedKeysVersion(providerName);
+  } catch {
+    return knownManagedVersions.get(providerName) || 0;
+  }
 }
 
 /**
@@ -86,26 +102,39 @@ function initKeyPool(config: ProviderConfig): KeyPool {
 export async function getKeyPool(config: ProviderConfig, forceRefresh = false): Promise<KeyPool> {
   const existing = keyPools.get(config.name);
   if (existing && !forceRefresh) {
-    // Periodically refresh managed keys (every 5 min)
-    const lastRefresh = lastManagedRefresh.get(config.name) || 0;
-    if (Date.now() - lastRefresh > MANAGED_KEY_REFRESH_MS) {
-      const managed = await loadManagedKeys(config.name);
-      if (managed) {
-        existing.keys = managed;
-        lastManagedRefresh.set(config.name, Date.now());
+    const lastCheck = lastManagedVersionCheck.get(config.name) || 0;
+    if (Date.now() - lastCheck > keyVersionCheckTtlMs()) {
+      lastManagedVersionCheck.set(config.name, Date.now());
+      const remoteVersion = await loadManagedKeysVersion(config.name);
+      const knownVersion = knownManagedVersions.get(config.name) || 0;
+      if (remoteVersion !== knownVersion) {
+        const managed = await loadManagedKeys(config.name, true);
+        if (managed) {
+          existing.keys = managed;
+        } else {
+          existing.keys = parseKeys(process.env[config.envKeyField], config.name);
+        }
+        knownManagedVersions.set(config.name, remoteVersion);
       }
     }
     return existing;
   }
   // First call or force refresh — try managed keys, then env vars
-  const managed = await loadManagedKeys(config.name);
+  const [managed, version] = await Promise.all([
+    loadManagedKeys(config.name, forceRefresh),
+    loadManagedKeysVersion(config.name),
+  ]);
   if (managed) {
     const pool: KeyPool = { provider: config.name, keys: managed, counter: 0 };
     keyPools.set(config.name, pool);
-    lastManagedRefresh.set(config.name, Date.now());
+    knownManagedVersions.set(config.name, version);
+    lastManagedVersionCheck.set(config.name, Date.now());
     return pool;
   }
-  return initKeyPool(config);
+  const pool = initKeyPool(config);
+  knownManagedVersions.set(config.name, version);
+  lastManagedVersionCheck.set(config.name, Date.now());
+  return pool;
 }
 
 /**
@@ -188,7 +217,7 @@ export function getKeyPoolStats(): Record<string, { total: number; available: nu
 /**
  * Update the memory key pool directly (called when admin modifies keys via KV).
  */
-export function updateMemoryKeyPool(providerName: string, rawKeys: string[]): void {
+export function updateMemoryKeyPool(providerName: string, rawKeys: string[], version?: number): void {
   const existing = keyPools.get(providerName);
   const keys = rawKeys.map((key) => ({
     key,
@@ -204,5 +233,8 @@ export function updateMemoryKeyPool(providerName: string, rawKeys: string[]): vo
       counter: 0,
     });
   }
-  lastManagedRefresh.set(providerName, Date.now());
+  lastManagedVersionCheck.set(providerName, Date.now());
+  if (version !== undefined) {
+    knownManagedVersions.set(providerName, version);
+  }
 }

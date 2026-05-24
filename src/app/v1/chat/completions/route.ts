@@ -51,7 +51,7 @@ function wrapStreamWithUsageTracking(
   let accumulatedContent = '';
   let recorded = false;
 
-  function recordUsage(promptTokens: number, completionTokens: number) {
+  async function recordUsage(promptTokens: number, completionTokens: number): Promise<void> {
     if (recorded) return;
     recorded = true;
     const latencyMs = Date.now() - startTime;
@@ -65,7 +65,7 @@ function wrapStreamWithUsageTracking(
       latencyMs,
       isStream: true,
     });
-    usageStorage.record(event).catch(() => {});
+    await usageStorage.record(event);
   }
 
   return new ReadableStream({
@@ -74,11 +74,11 @@ function wrapStreamWithUsageTracking(
       if (done) {
         // Stream ended — record usage
         if (lastUsage) {
-          recordUsage(lastUsage.prompt_tokens || 0, lastUsage.completion_tokens || 0);
+          await recordUsage(lastUsage.prompt_tokens || 0, lastUsage.completion_tokens || 0);
         } else if (accumulatedContent) {
           // Fallback: estimate tokens from accumulated content
           const estimatedCompletion = estimateTokens(accumulatedContent);
-          recordUsage(requestPromptTokens, estimatedCompletion);
+          await recordUsage(requestPromptTokens, estimatedCompletion);
         }
         controller.close();
         return;
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 3.5. Check rate limits (quota)
-  const quota = await usageStorage.checkQuota();
+  const quota = await usageStorage.checkQuota(true);
   if (!quota.allowed) {
     return new Response(
       JSON.stringify({

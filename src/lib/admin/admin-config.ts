@@ -8,13 +8,46 @@ import { withTimeout } from '@/lib/utils/timeout';
 import type { ProviderConfig } from '../providers/types';
 
 let _kv: any = null;
-let _kvChecked = false;
+
+interface ConfigCacheEntry {
+  data: unknown;
+  expiresAt: number;
+}
+
+const CONFIG_CACHE_TTL_MS = 60_000;
+const configCache = new Map<string, ConfigCacheEntry>();
+
+function getCached<T>(key: string): T | null {
+  const entry = configCache.get(key);
+  if (entry && Date.now() < entry.expiresAt) return entry.data as T;
+  return null;
+}
+
+function setCached(key: string, data: unknown, ttlMs = CONFIG_CACHE_TTL_MS): void {
+  configCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
+function clearCache(prefix?: string): void {
+  if (!prefix) {
+    configCache.clear();
+    return;
+  }
+  for (const key of configCache.keys()) {
+    if (key.startsWith(prefix)) {
+      configCache.delete(key);
+    }
+  }
+}
 
 export function createMemoryMockKV() {
   const store = new Map<string, any>();
   return {
     async get(key: string) {
       return store.get(key) ?? null;
+    },
+    async mget(...keysOrArray: Array<string | string[]>) {
+      const keys = Array.isArray(keysOrArray[0]) ? keysOrArray[0] as string[] : keysOrArray as string[];
+      return keys.map((key) => store.get(key) ?? null);
     },
     async set(key: string, value: any) {
       store.set(key, value);
@@ -75,6 +108,12 @@ export function createMemoryMockKV() {
       store.set(key, next);
       return next;
     },
+    async incrby(key: string, increment: number) {
+      const prev = Number(store.get(key) || 0);
+      const next = prev + increment;
+      store.set(key, next);
+      return next;
+    },
     async sadd(key: string, member: string) {
       let current = store.get(key);
       if (!(current instanceof Set)) {
@@ -97,12 +136,6 @@ export function createMemoryMockKV() {
 
 async function getKV() {
   const g = global as any;
-  console.log('[getKV DEBUG]', {
-    NODE_ENV: process.env.NODE_ENV,
-    KV_REST_API_URL: process.env.KV_REST_API_URL,
-    hasMock: !!g._mockKVInstance,
-    _kvChecked
-  });
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
     if (_kv && !_kv._isMock) return _kv;
     try {
@@ -117,7 +150,7 @@ async function getKV() {
     }
   }
 
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
     if (!g._mockKVInstance) {
       g._mockKVInstance = createMemoryMockKV();
       g._mockKVInstance._isMock = true;
@@ -134,6 +167,7 @@ async function getKV() {
 const PREFIX = {
   fallbacks: 'admin:fallbacks:',   // admin:fallbacks:{provider} → JSON string[]
   keys: 'admin:keys:',             // admin:keys:{provider} → JSON string[] (raw API keys)
+  keyVersion: 'admin:keys:version:', // admin:keys:version:{provider} → monotonically increasing number
   quota: 'admin:quota',            // admin:quota → Hash { dailyLimit, monthlyLimit }
 } as const;
 
@@ -172,6 +206,10 @@ export async function getFallbackChain(
   if ((global as any).__mockFallbackChain) {
     return (global as any).__mockFallbackChain(providerName, staticFallbacks);
   }
+  const cacheKey = `fallback:${providerName}`;
+  const cached = getCached<string[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     const kv = await getKV();
     if (kv) {
@@ -183,15 +221,23 @@ export async function getFallbackChain(
       );
       if (raw) {
         const parsed = parseJsonOrArray(raw);
-        if (parsed) return parsed;
+        if (parsed) {
+          setCached(cacheKey, parsed);
+          return parsed;
+        }
       }
     }
   } catch {
     // fall through
   }
   // Return static fallback as single-element array, or array if already array, or empty
-  if (Array.isArray(staticFallbacks)) return staticFallbacks;
-  return staticFallbacks ? [staticFallbacks] : [];
+  const fallback = Array.isArray(staticFallbacks)
+    ? staticFallbacks
+    : staticFallbacks
+      ? [staticFallbacks]
+      : [];
+  setCached(cacheKey, fallback);
+  return fallback;
 }
 
 /**
@@ -207,6 +253,7 @@ export async function setFallbackChain(
     throw new Error('KV storage not configured — cannot persist fallback overrides');
   }
   await kv.set(`${PREFIX.fallbacks}${providerName}`, JSON.stringify(chain));
+  clearCache(`fallback:${providerName}`);
 }
 
 /**
@@ -216,6 +263,7 @@ export async function clearFallbackChain(providerName: string): Promise<void> {
   const kv = await getKV();
   if (!kv) return;
   await kv.del(`${PREFIX.fallbacks}${providerName}`);
+  clearCache(`fallback:${providerName}`);
 }
 
 // ── API Key Management ───────────────────────────────────────
@@ -224,7 +272,11 @@ export async function clearFallbackChain(providerName: string): Promise<void> {
  * Get managed API keys for a provider.
  * Returns KV override if set, otherwise null (caller should use env vars).
  */
-export async function getManagedKeys(providerName: string): Promise<string[] | null> {
+export async function getManagedKeys(providerName: string, forceRefresh = false): Promise<string[] | null> {
+  const cacheKey = `keys:${providerName}`;
+  const cached = forceRefresh ? null : getCached<string[] | null>(cacheKey);
+  if (cached !== null) return cached;
+
   try {
     const kv = await getKV();
     if (kv) {
@@ -236,19 +288,58 @@ export async function getManagedKeys(providerName: string): Promise<string[] | n
       );
       if (raw) {
         const parsed = parseJsonOrArray(raw);
-        if (parsed) return parsed;
+        if (parsed) {
+          setCached(cacheKey, parsed);
+          return parsed;
+        }
       }
     }
   } catch {
     // fall through
   }
+  setCached(cacheKey, null);
   return null;
+}
+
+export async function getManagedKeysVersion(providerName: string): Promise<number> {
+  try {
+    const kv = await getKV();
+    if (!kv) return 0;
+    const raw = await withTimeout(
+      kv.get(`${PREFIX.keyVersion}${providerName}`),
+      1000,
+      0,
+      `getManagedKeysVersion:${providerName}`
+    );
+    return Number(raw || 0);
+  } catch {
+    return 0;
+  }
+}
+
+async function bumpManagedKeysVersion(providerName: string, kv?: any): Promise<number> {
+  const client = kv || await getKV();
+  if (!client) return 0;
+  try {
+    const key = `${PREFIX.keyVersion}${providerName}`;
+    if (typeof client.incr === 'function') {
+      return Number(await client.incr(key));
+    }
+    const current = Number(await client.get(key) || 0) + 1;
+    await client.set(key, current);
+    return current;
+  } catch {
+    return 0;
+  }
 }
 
 /**
  * Get all managed keys for all providers (returns a map of provider → keys[]).
  */
 export async function getAllManagedKeys(): Promise<Record<string, string[]>> {
+  const cached = getCached<Record<string, string[]>>('keys:all');
+  if (cached) return cached;
+
   const kv = await getKV();
   if (!kv) return {};
 
@@ -288,6 +379,7 @@ export async function getAllManagedKeys(): Promise<Record<string, string[]>> {
         }
       }
     }
+    setCached('keys:all', out);
     return out;
   } catch {
     return {};
@@ -307,9 +399,12 @@ export async function setManagedKeys(
     throw new Error('KV storage not configured — cannot persist key overrides');
   }
   await kv.set(`${PREFIX.keys}${providerName}`, JSON.stringify(keys));
+  const version = await bumpManagedKeysVersion(providerName, kv);
+  clearCache(`keys:${providerName}`);
+  clearCache('keys:all');
   try {
     const { updateMemoryKeyPool } = await import('../relay/key-pool');
-    updateMemoryKeyPool(providerName, keys);
+    updateMemoryKeyPool(providerName, keys, version);
   } catch {
     // ignore
   }
@@ -368,6 +463,9 @@ export interface CustomQuotaConfig {
  * Returns null if no custom quota override is configured.
  */
 export async function getCustomQuota(): Promise<CustomQuotaConfig | null> {
+  const cached = getCached<CustomQuotaConfig | null>('quota');
+  if (cached !== null) return cached;
+
   try {
     const kv = await getKV();
     if (kv) {
@@ -378,15 +476,18 @@ export async function getCustomQuota(): Promise<CustomQuotaConfig | null> {
         'getCustomQuota'
       );
       if (raw && (raw.dailyLimit !== undefined || raw.monthlyLimit !== undefined)) {
-        return {
+        const quota = {
           dailyLimit: raw.dailyLimit !== null && raw.dailyLimit !== undefined && raw.dailyLimit !== '' ? parseInt(String(raw.dailyLimit), 10) : null,
           monthlyLimit: raw.monthlyLimit !== null && raw.monthlyLimit !== undefined && raw.monthlyLimit !== '' ? parseInt(String(raw.monthlyLimit), 10) : null,
         };
+        setCached('quota', quota);
+        return quota;
       }
     }
   } catch {
     // fall through
   }
+  setCached('quota', null);
   return null;
 }
 
@@ -402,6 +503,7 @@ export async function setCustomQuota(quota: CustomQuotaConfig): Promise<void> {
     dailyLimit: quota.dailyLimit === null ? '' : String(quota.dailyLimit),
     monthlyLimit: quota.monthlyLimit === null ? '' : String(quota.monthlyLimit),
   });
+  clearCache('quota');
 }
 
 /**
@@ -411,6 +513,7 @@ export async function clearCustomQuota(): Promise<void> {
   const kv = await getKV();
   if (!kv) return;
   await kv.del(PREFIX.quota);
+  clearCache('quota');
 }
 
 // ── Webhook Notification Management ──────────────────────────
@@ -430,6 +533,9 @@ const DEFAULT_SETTINGS: WebhookSettings = {
  * Get all webhook settings from KV.
  */
 export async function getWebhookSettings(): Promise<WebhookSettings> {
+  const cached = getCached<WebhookSettings>('webhooks');
+  if (cached) return cached;
+
   try {
     const kv = await getKV();
     if (kv) {
@@ -441,13 +547,17 @@ export async function getWebhookSettings(): Promise<WebhookSettings> {
       );
       if (raw) {
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        return { ...DEFAULT_SETTINGS, ...parsed };
+        const settings = { ...DEFAULT_SETTINGS, ...parsed };
+        setCached('webhooks', settings);
+        return settings;
       }
     }
   } catch {
     // fall through
   }
-  return { ...DEFAULT_SETTINGS };
+  const settings = { ...DEFAULT_SETTINGS };
+  setCached('webhooks', settings);
+  return settings;
 }
 
 /**
@@ -459,6 +569,7 @@ export async function saveWebhookSettings(settings: WebhookSettings): Promise<vo
     throw new Error('KV storage not configured — cannot persist webhook settings');
   }
   await kv.set(WEBHOOK_PREFIX, JSON.stringify(settings));
+  clearCache('webhooks');
 }
 
 /**
@@ -521,6 +632,9 @@ export async function saveAlertThresholds(thresholds: WebhookAlertThreshold[]): 
  * Get all custom providers from KV.
  */
 export async function getCustomProviders(): Promise<Record<string, ProviderConfig>> {
+  const cached = getCached<Record<string, ProviderConfig>>('customProviders');
+  if (cached) return cached;
+
   try {
     const kv = await getKV();
     if (kv) {
@@ -532,17 +646,23 @@ export async function getCustomProviders(): Promise<Record<string, ProviderConfi
       );
       if (raw) {
         if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
-          return raw as Record<string, ProviderConfig>;
+          const providers = raw as Record<string, ProviderConfig>;
+          setCached('customProviders', providers);
+          return providers;
         }
         if (typeof raw === 'string') {
-          return JSON.parse(raw);
+          const providers = JSON.parse(raw);
+          setCached('customProviders', providers);
+          return providers;
         }
       }
     }
   } catch (err) {
     console.error('[getCustomProviders] Error:', err);
   }
-  return {};
+  const providers = {};
+  setCached('customProviders', providers);
+  return providers;
 }
 
 /**
@@ -559,6 +679,13 @@ export async function saveCustomProvider(provider: ProviderConfig): Promise<void
     isCustom: true,
   };
   await kv.set('admin:custom_providers', JSON.stringify(custom));
+  clearCache('customProviders');
+  try {
+    const { clearProvidersCache } = await import('../providers/resolver');
+    clearProvidersCache();
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -575,6 +702,17 @@ export async function deleteCustomProvider(name: string): Promise<void> {
   // Clean up keys and fallbacks entries
   await kv.del(`admin:keys:${name}`);
   await kv.del(`admin:fallbacks:${name}`);
+  await bumpManagedKeysVersion(name, kv);
+  clearCache('customProviders');
+  clearCache(`keys:${name}`);
+  clearCache('keys:all');
+  clearCache(`fallback:${name}`);
+  try {
+    const { clearProvidersCache } = await import('../providers/resolver');
+    clearProvidersCache();
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -596,5 +734,3 @@ export function tryDecodeBase64(str: string): string {
   }
   return str;
 }
-
-

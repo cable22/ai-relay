@@ -8,83 +8,11 @@
 import { NextRequest } from 'next/server';
 import { sendDailyReport } from '@/lib/webhooks';
 import { getWebhookSettings } from '@/lib/admin/admin-config';
-import type { DailyReportData } from '@/lib/webhooks/types';
-import { kv } from '@vercel/kv';
+import { KVUsageStorage } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
-/**
- * Build the DailyReportData from KV usage data.
- * Reads today's global stats and per-provider stats.
- */
-async function buildDailyReport(date: string): Promise<DailyReportData | null> {
-  // Read global usage for the date
-  const globalRaw = await kv.hgetall(`usage:daily:${date}`);
-  if (!globalRaw || Object.keys(globalRaw).length === 0) return null;
-
-  const totalRequests = Number(globalRaw.requests ?? 0);
-  const totalTokens = Number(globalRaw.tokens ?? 0);
-  const promptTokens = Number(globalRaw.promptTokens ?? 0);
-  const completionTokens = Number(globalRaw.completionTokens ?? 0);
-
-  // Read per-provider usage using SCAN
-  const providers: DailyReportData['providers'] = {};
-
-  try {
-    const keys: string[] = [];
-    let cursor = 0;
-    do {
-      const result = await kv.scan(cursor, {
-        match: `usage:provider:*:daily:${date}`,
-        count: 100,
-      });
-      cursor = result[0];
-      keys.push(...result[1]);
-    } while (cursor !== 0);
-
-    for (const key of keys) {
-      const match = key.match(/^usage:provider:(.+):daily:/);
-      if (!match) continue;
-      const providerName = match[1];
-      const raw = await kv.hgetall(key);
-      if (!raw || Object.keys(raw).length === 0) continue;
-      providers[providerName] = {
-        requests: Number(raw.requests ?? 0),
-        tokens: Number(raw.tokens ?? 0),
-        promptTokens: Number(raw.promptTokens ?? 0),
-        completionTokens: Number(raw.completionTokens ?? 0),
-      };
-    }
-  } catch {
-    // SCAN may not be supported in dev — skip provider breakdown
-  }
-
-  // Read yesterday for comparison
-  const yesterdayDate = new Date(new Date(date + 'T00:00:00Z').getTime() - 86400000)
-    .toISOString().slice(0, 10);
-  const yesterdayRaw = await kv.hgetall(`usage:daily:${yesterdayDate}`);
-  const yesterdayComparison = yesterdayRaw && Object.keys(yesterdayRaw).length > 0
-    ? {
-        requestsChange: totalRequests > 0 && Number(yesterdayRaw.requests ?? 0) > 0
-          ? ((totalRequests - Number(yesterdayRaw.requests ?? 0)) / Number(yesterdayRaw.requests ?? 1)) * 100
-          : 0,
-        tokensChange: totalTokens > 0 && Number(yesterdayRaw.tokens ?? 0) > 0
-          ? ((totalTokens - Number(yesterdayRaw.tokens ?? 0)) / Number(yesterdayRaw.tokens ?? 1)) * 100
-          : 0,
-      }
-    : undefined;
-
-  return {
-    date,
-    totalRequests,
-    totalTokens,
-    promptTokens,
-    completionTokens,
-    providers,
-    topModels: [], // Model-level breakdown not tracked yet
-    yesterdayComparison,
-  };
-}
+const usageStorage = new KVUsageStorage();
 
 /**
  * GET /api/cron/daily-report
@@ -113,7 +41,7 @@ export async function GET(request: NextRequest) {
     const yesterday = new Date(today.getTime() - 86400000);
     const dateStr = yesterday.toISOString().slice(0, 10);
 
-    const report = await buildDailyReport(dateStr);
+    const report = await usageStorage.getDailyReport(dateStr);
     if (!report) {
       return Response.json({
         success: true,
