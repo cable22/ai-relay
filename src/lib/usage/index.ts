@@ -11,3 +11,4 @@ export type {
 } from './sdk';
 export { generateRequestId, createUsageEvent } from './sdk';
 export { KVUsageStorage } from './storage/kv-storage';
+export { BatchUsageRecorder, getBatchRecorder } from './storage/batch-usage-recorder';

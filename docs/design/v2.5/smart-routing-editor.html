@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Relay v2.5 — 智能路由编辑器 UI 设计稿</title>
+<style>
+/* ===== Design Tokens (dark glassmorphism, consistent with iter 1-4) ===== */
+:root {
+  --bg: #09090b;
+  --bg-radial: radial-gradient(circle at top, #1e293b, #09090b);
+  --panel: rgba(30,41,59,.45);
+  --panel-hover: rgba(30,41,59,.6);
+  --line: rgba(255,255,255,.08);
+  --line-active: rgba(96,165,250,.45);
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --dim: #6b7280;
+  --blue: #60a5fa;
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --gray: #6b7280;
+  --violet: #8b5cf6;
+  --security-purple: #a78bfa;
+  --gradient-primary: linear-gradient(135deg, #2563eb, var(--violet));
+  --gradient-active: linear-gradient(135deg, rgba(59,130,246,.16), rgba(139,92,246,.16));
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow-panel: 0 4px 30px rgba(0,0,0,.35);
+  --blur: blur(12px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-radial); background-attachment: fixed;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+  line-height: 1.6; min-height: 100vh;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 28px 20px; }
+.section-title {
+  font-size: 14px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin: 36px 0 16px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.section-title:first-child { margin-top: 0; }
+
+/* ===== Shared Panel ===== */
+.panel {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 24px;
+  backdrop-filter: var(--blur); box-shadow: var(--shadow-panel);
+  margin-bottom: 20px;
+}
+.panel:hover { background: var(--panel-hover); }
+
+/* ===== Status Badge ===== */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 600;
+}
+.status-badge .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; position: relative;
+}
+.status-badge .dot::after {
+  content: ""; position: absolute; inset: -3px;
+  border-radius: 50%; opacity: .3;
+}
+.status-healthy  { background: rgba(52,211,153,.1); color: var(--green); }
+.status-healthy .dot  { background: var(--green); }
+.status-healthy .dot::after  { border: 2px solid var(--green); animation: pulse-g 2s infinite; }
+.status-degraded { background: rgba(251,191,36,.1); color: var(--yellow); }
+.status-degraded .dot { background: var(--yellow); }
+.status-degraded .dot::after { border: 2px solid var(--yellow); animation: pulse-y 2s infinite; }
+.status-down     { background: rgba(248,113,113,.1); color: var(--red); }
+.status-down .dot     { background: var(--red); }
+.status-down .dot::after     { border: 2px solid var(--red); animation: pulse-r 1.5s infinite; }
+.status-unknown  { background: rgba(107,114,128,.1); color: var(--gray); }
+.status-unknown .dot  { background: var(--gray); }
+@keyframes pulse-g { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:.6;transform:scale(1.4)} }
+@keyframes pulse-y { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+@keyframes pulse-r { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.8;transform:scale(1.5)} }
+
+/* ===== Flow Canvas ===== */
+.flow-canvas {
+  background: rgba(15,23,42,.6); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 0;
+  min-height: 420px; position: relative; overflow: hidden;
+}
+.flow-canvas-inner {
+  width: 100%; height: 420px;
+}
+
+/* Flow nodes */
+.flow-node {
+  position: absolute; border-radius: var(--radius-md);
+  padding: 16px 20px; cursor: grab; user-select: none;
+  transition: box-shadow .2s, transform .15s;
+  min-width: 180px;
+}
+.flow-node:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+.flow-node:active { cursor: grabbing; }
+
+.flow-node-entry {
+  background: linear-gradient(135deg, rgba(37,99,235,.25), rgba(37,99,235,.1));
+  border: 1.5px solid rgba(96,165,250,.4);
+  left: 40px; top: 180px;
+}
+.flow-node-strategy {
+  background: linear-gradient(135deg, rgba(139,92,246,.25), rgba(139,92,246,.1));
+  border: 1.5px solid rgba(139,92,246,.4);
+  left: 310px; top: 170px;
+  min-width: 200px; text-align: center;
+}
+.flow-node-provider {
+  background: var(--panel); border: 1.5px solid var(--line);
+  backdrop-filter: var(--blur);
+}
+.flow-node-provider.healthy { border-color: rgba(52,211,153,.35); }
+.flow-node-provider.degraded { border-color: rgba(251,191,36,.35); }
+.flow-node-provider.down { border-color: rgba(248,113,113,.25); opacity: .7; }
+
+.flow-node-label { font-size: 13px; font-weight: 700; }
+.flow-node-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.flow-node-metric {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px;
+  font-size: 11px; color: var(--dim);
+}
+.flow-node-metric .metric-val { font-weight: 600; color: var(--text); font-size: 12px; }
+
+/* Mini sparkline */
+.sparkline { display: inline-block; vertical-align: middle; }
+.sparkline polyline { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Flow edges (SVG overlay) */
+.flow-edges { position: absolute; inset: 0; pointer-events: none; }
+.edge-main { stroke: url(#edge-gradient); stroke-width: 2; fill: none; }
+.edge-fallback { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; opacity: .5; }
+.edge-disabled { stroke: rgba(107,114,128,.2); stroke-width: 1.5; fill: none; }
+.edge-label {
+  font-size: 10px; fill: var(--muted); font-weight: 600;
+  text-anchor: middle; dominant-baseline: middle;
+}
+
+/* Flow animation on edges */
+@keyframes flow-dash {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+.edge-animated { stroke-dasharray: 8 4; animation: flow-dash .8s linear infinite; }
+
+/* Canvas toolbar */
+.canvas-toolbar {
+  position: absolute; top: 12px; right: 12px;
+  display: flex; gap: 6px; z-index: 10;
+}
+.canvas-toolbar button {
+  background: var(--panel); border: 1px solid var(--line);
+  color: var(--muted); border-radius: var(--radius-sm);
+  padding: 6px 10px; font-size: 12px; cursor: pointer;
+  backdrop-filter: var(--blur); transition: all .15s;
+}
+.canvas-toolbar button:hover { background: var(--panel-hover); color: var(--text); }
+
+/* Minimap */
+.minimap {
+  position: absolute; bottom: 12px; right: 12px;
+  width: 140px; height: 90px; background: rgba(15,23,42,.8);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 6px; z-index: 10;
+}
+.minimap-viewport {
+  border: 1.5px solid var(--blue); border-radius: 2px;
+  position: absolute; opacity: .5;
+}
+
+/* Realtime overlay */
+.realtime-overlay {
+  position: absolute; top: 12px; left: 12px;
+  background: rgba(15,23,42,.85); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: 12px 16px;
+  backdrop-filter: var(--blur); z-index: 10; min-width: 280px;
+}
+.realtime-overlay h4 {
+  font-size: 11px; color: var(--dim); text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 8px;
+}
+.route-split {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; margin-bottom: 4px;
+}
+.route-split .provider-name { font-weight: 600; color: var(--text); }
+.route-split .split-pct { color: var(--blue); font-weight: 700; }
+.route-split .split-bar {
+  flex: 1; height: 4px; background: rgba(255,255,255,.06);
+  border-radius: 2px; overflow: hidden;
+}
+.route-split .split-bar-fill { height: 100%; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== Header ===== -->
+<h1 style="font-size:22px;font-weight:700;background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+  v2.5 — 智能路由编辑器 UI 设计稿
+</h1>
+<p style="color:var(--muted);font-size:13px;margin-top:6px;">
+  AI Relay · 路由拓扑 + 策略配置 + 实时状态 · 设计师：像素姐 · 2026-05-27
+</p>
+
+<!-- ===== Section 1: Flow Canvas ===== -->
+<div class="section-title">1 · 路由流程图编辑器</div>
+<div class="flow-canvas">
+  <!-- Realtime overlay -->
+  <div class="realtime-overlay">
+    <h4>实时路由状态</h4>
+    <div class="route-split">
+      <span class="provider-name">OpenAI</span>
+      <span class="split-pct">72%</span>
+      <span class="split-bar"><span class="split-bar-fill" style="width:72%;background:var(--blue);"></span></span>
+    </div>
+    <div class="route-split">
+      <span class="provider-name">Anthropic</span>
+      <span class="split-pct">28%</span>
+      <span class="split-bar"><span class="split-bar-fill" style="width:28%;background:var(--violet);"></span></span>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--dim);">
+      最近 1min 切换 <span style="color:var(--green);font-weight:700;">0</span> 次 · 全局健康 <span style="color:var(--green);">●</span> 正常
+    </div>
+  </div>
+
+  <!-- Canvas toolbar -->
+  <div class="canvas-toolbar">
+    <button title="自动布局">⊞ 布局</button>
+    <button title="放大">+</button>
+    <button title="缩小">−</button>
+    <button title="适配画布">⊡</button>
+  </div>
+
+  <!-- SVG edges -->
+  <svg class="flow-edges" viewBox="0 0 1000 420" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="edge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#60a5fa" stop-opacity=".7"/>
+        <stop offset="100%" stop-color="#8b5cf6" stop-opacity=".7"/>
+      </linearGradient>
+    </defs>
+    <!-- Entry → Strategy -->
+    <path class="edge-main edge-animated" d="M 200,200 C 250,200 260,190 310,190"/>
+    <!-- Strategy → OpenAI -->
+    <path class="edge-main edge-animated" d="M 510,185 C 580,185 600,120 680,110" style="animation-delay:-.2s;"/>
+    <text class="edge-label" x="610" y="135">72%</text>
+    <!-- Strategy → Anthropic -->
+    <path class="edge-main edge-animated" d="M 510,195 C 580,195 600,260 680,260" style="animation-delay:-.4s;"/>
+    <text class="edge-label" x="610" y="240">28%</text>
+    <!-- Strategy → Deepseek (fallback) -->
+    <path class="edge-fallback" d="M 510,200 C 600,200 620,340 680,340"/>
+    <text class="edge-label" x="610" y="330" style="fill:var(--gray);">fallback</text>
+  </svg>
+
+  <!-- Entry Node -->
+  <div class="flow-node flow-node-entry">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px;">📥</span>
+      <div>
+        <div class="flow-node-label">Incoming Request</div>
+        <div class="flow-node-sub">请求入口</div>
+      </div>
+    </div>
+    <div class="flow-node-metric" style="margin-top:10px;">
+      <span>QPS</span>
+      <span class="metric-val">128</span>
+      <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16">
+        <polyline points="0,14 6,10 12,12 18,6 24,8 30,4 36,7 42,3 48,5" stroke="var(--green)" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Strategy Node -->
+  <div class="flow-node flow-node-strategy">
+    <div style="font-size:22px;margin-bottom:4px;">⚡</div>
+    <div class="flow-node-label" style="font-size:14px;">延迟优先</div>
+    <div class="flow-node-sub">Latency First</div>
+    <div style="margin-top:8px;display:flex;justify-content:center;gap:6px;">
+      <span class="status-badge status-healthy" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>活跃</span>
+    </div>
+  </div>
+
+  <!-- Provider: OpenAI -->
+  <div class="flow-node flow-node-provider healthy" style="left:680px;top:72px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">🟢</span>
+        <div class="flow-node-label">OpenAI</div>
+      </div>
+      <span class="status-badge status-healthy"><span class="dot"></span> Healthy</span>
+    </div>
+    <div class="flow-node-metric">
+      <span>延迟</span><span class="metric-val">142ms</span>
+      <span style="margin-left:12px;">Key</span><span class="metric-val">3/3</span>
+    </div>
+    <div class="flow-node-metric">
+      <span>月请求</span><span class="metric-val">42.8K</span>
+      <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16">
+        <polyline points="0,12 6,10 12,11 18,8 24,9 30,6 36,5 42,4 48,3" stroke="var(--green)" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Provider: Anthropic -->
+  <div class="flow-node flow-node-provider healthy" style="left:680px;top:224px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">🟢</span>
+        <div class="flow-node-label">Anthropic</div>
+      </div>
+      <span class="status-badge status-healthy"><span class="dot"></span> Healthy</span>
+    </div>
+    <div class="flow-node-metric">
+      <span>延迟</span><span class="metric-val">198ms</span>
+      <span style="margin-left:12px;">Key</span><span class="metric-val">2/2</span>
+    </div>
+    <div class="flow-node-metric">
+      <span>月请求</span><span class="metric-val">18.3K</span>
+      <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16">
+        <polyline points="0,14 6,13 12,10 18,12 24,8 30,9 36,6 42,7 48,5" stroke="var(--blue)" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Provider: Deepseek (fallback) -->
+  <div class="flow-node flow-node-provider unknown" style="left:680px;top:340px;opacity:.55;border-style:dashed;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">⚪</span>
+        <div class="flow-node-label" style="color:var(--dim);">Deepseek</div>
+      </div>
+      <span class="status-badge status-unknown"><span class="dot"></span> Standby</span>
+    </div>
+    <div class="flow-node-metric" style="color:var(--dim);">
+      <span>延迟</span><span class="metric-val">—</span>
+      <span style="margin-left:12px;">Key</span><span class="metric-val">1/1</span>
+    </div>
+  </div>
+
+  <!-- Minimap -->
+  <div class="minimap">
+    <div style="width:100%;height:100%;position:relative;">
+      <!-- Simplified dots for minimap -->
+      <div style="position:absolute;left:12%;top:45%;width:6px;height:6px;background:var(--blue);border-radius:50%;"></div>
+      <div style="position:absolute;left:36%;top:42%;width:6px;height:6px;background:var(--violet);border-radius:50%;"></div>
+      <div style="position:absolute;left:72%;top:25%;width:6px;height:6px;background:var(--green);border-radius:50%;"></div>
+      <div style="position:absolute;left:72%;top:55%;width:6px;height:6px;background:var(--green);border-radius:50%;"></div>
+      <div style="position:absolute;left:72%;top:80%;width:6px;height:6px;background:var(--gray);border-radius:50%;"></div>
+    </div>
+    <div class="minimap-viewport" style="left:5%;top:10%;width:60%;height:70%;"></div>
+  </div>
+</div>
+
+<!-- ===== Section 2: Strategy Config Panel ===== -->
+<div class="section-title">2 · 路由策略配置面板</div>
+<div class="panel">
+  <!-- Strategy Tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:20px;">
+    <button style="flex:1;padding:10px 16px;border-radius:var(--radius-sm);border:1px solid rgba(96,165,250,.3);background:rgba(96,165,250,.1);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;">⚡ 延迟优先</button>
+    <button style="flex:1;padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--line);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">💰 成本优先</button>
+    <button style="flex:1;padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--line);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">🛡️ 可用性优先</button>
+  </div>
+
+  <!-- Latency First Config -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <!-- Left: Config Controls -->
+    <div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">配置参数</div>
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span style="color:var(--text);">最大可接受延迟</span>
+          <span style="color:var(--blue);font-weight:600;">500ms</span>
+        </div>
+        <div style="width:100%;height:6px;background:rgba(255,255,255,.06);border-radius:3px;position:relative;">
+          <div style="width:28%;height:100%;background:var(--gradient-primary);border-radius:3px;"></div>
+          <div style="position:absolute;left:28%;top:-4px;width:14px;height:14px;background:#fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4);transform:translateX(-50%);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px;">
+          <span>100ms</span><span>2000ms</span>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span style="color:var(--text);">延迟探测频率</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span style="padding:4px 12px;border-radius:var(--radius-pill);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;">10s</span>
+          <span style="padding:4px 12px;border-radius:var(--radius-pill);background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);font-size:12px;color:var(--blue);cursor:pointer;font-weight:600;">30s</span>
+          <span style="padding:4px 12px;border-radius:var(--radius-pill);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;">60s</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;margin-bottom:6px;color:var(--text);">通用设置</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+            <span style="color:var(--muted);">Sticky Session</span>
+            <span style="width:36px;height:20px;background:rgba(52,211,153,.3);border-radius:10px;position:relative;display:inline-block;"><span style="position:absolute;right:2px;top:2px;width:16px;height:16px;background:var(--green);border-radius:50%;"></span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+            <span style="color:var(--muted);">单 Provider 超时</span>
+            <span style="color:var(--text);font-weight:600;">10s</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+            <span style="color:var(--muted);">重试次数</span>
+            <span style="color:var(--text);font-weight:600;">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Provider Latency Ranking -->
+    <div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Provider 延迟排名</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Rank 1 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:var(--radius-md);">
+          <span style="font-size:18px;font-weight:800;color:var(--green);">#1</span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);">OpenAI</div>
+            <div style="font-size:11px;color:var(--dim);">GPT-4o · 3 keys</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:var(--green);">142ms</div>
+            <div style="font-size:10px;color:var(--dim);">p50: 128ms</div>
+          </div>
+        </div>
+        <!-- Rank 2 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:var(--radius-md);">
+          <span style="font-size:18px;font-weight:800;color:var(--blue);">#2</span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Anthropic</div>
+            <div style="font-size:11px;color:var(--dim);">Claude 3.5 · 2 keys</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:var(--blue);">198ms</div>
+            <div style="font-size:10px;color:var(--dim);">p50: 175ms</div>
+          </div>
+        </div>
+        <!-- Rank 3 (standby) -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(107,114,128,.04);border:1px dashed rgba(107,114,128,.15);border-radius:var(--radius-md);opacity:.6;">
+          <span style="font-size:18px;font-weight:800;color:var(--gray);">#3</span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--dim);">Deepseek</div>
+            <div style="font-size:11px;color:var(--dim);">Deepseek-V3 · Standby</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:var(--gray);">—</div>
+            <div style="font-size:10px;color:var(--dim);">待命中</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;text-align:right;">
+        <span style="padding:6px 16px;border-radius:var(--radius-sm);background:var(--gradient-primary);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">保存配置</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Section 3: Routing Decision Log ===== -->
+<div class="section-title">3 · 路由决策日志（实时流）</div>
+<div class="panel" style="max-height:200px;overflow-y:auto;">
+  <div style="display:flex;flex-direction:column;gap:6px;font-family:'SF Mono',Monaco,monospace;font-size:11px;">
+    <div style="display:flex;gap:12px;padding:6px 8px;border-radius:var(--radius-sm);background:rgba(52,211,153,.04);">
+      <span style="color:var(--dim);min-width:72px;">09:23:41</span>
+      <span style="color:var(--green);min-width:64px;">ROUTE</span>
+      <span style="color:var(--text);">model:gpt-4o → openai (142ms) ✓</span>
+    </div>
+    <div style="display:flex;gap:12px;padding:6px 8px;border-radius:var(--radius-sm);">
+      <span style="color:var(--dim);min-width:72px;">09:23:40</span>
+      <span style="color:var(--blue);min-width:64px;">ROUTE</span>
+      <span style="color:var(--text);">model:claude-3.5 → anthropic (198ms) ✓</span>
+    </div>
+    <div style="display:flex;gap:12px;padding:6px 8px;border-radius:var(--radius-sm);background:rgba(251,191,36,.04);">
+      <span style="color:var(--dim);min-width:72px;">09:23:38</span>
+      <span style="color:var(--yellow);min-width:64px;">FALLBACK</span>
+      <span style="color:var(--text);">model:gpt-4o → openai timeout → deepseek (382ms) ✓</span>
+    </div>
+    <div style="display:flex;gap:12px;padding:6px 8px;border-radius:var(--radius-sm);">
+      <span style="color:var(--dim);min-width:72px;">09:23:35</span>
+      <span style="color:var(--green);min-width:64px;">ROUTE</span>
+      <span style="color:var(--text);">model:gpt-4o → openai (156ms) ✓</span>
+    </div>
+    <div style="display:flex;gap:12px;padding:6px 8px;border-radius:var(--radius-sm);background:rgba(248,113,113,.04);">
+      <span style="color:var(--dim);min-width:72px;">09:23:32</span>
+      <span style="color:var(--red);min-width:64px;">FAIL</span>
+      <span style="color:var(--text);">model:gpt-4o → openai 429 (rate limit) → retry queued</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Section 4: Mobile Fallback ===== -->
+<div class="section-title">4 · 移动端降级方案</div>
+<div style="max-width:375px;margin:0 auto;">
+  <div class="panel" style="padding:16px;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;">路由状态</div>
+    <!-- Provider cards on mobile -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="padding:12px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:var(--radius-md);display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">🟢</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">OpenAI</div>
+          <div style="font-size:11px;color:var(--dim);">142ms · 3/3 keys</div>
+        </div>
+        <span style="font-size:14px;font-weight:700;color:var(--green);">72%</span>
+      </div>
+      <div style="padding:12px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:var(--radius-md);display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">🟢</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Anthropic</div>
+          <div style="font-size:11px;color:var(--dim);">198ms · 2/2 keys</div>
+        </div>
+        <span style="font-size:14px;font-weight:700;color:var(--blue);">28%</span>
+      </div>
+      <div style="padding:12px;background:rgba(107,114,128,.04);border:1px dashed rgba(107,114,128,.15);border-radius:var(--radius-md);display:flex;align-items:center;gap:12px;opacity:.5;">
+        <span style="font-size:20px;">⚪</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--dim);">Deepseek</div>
+          <div style="font-size:11px;color:var(--dim);">Standby · 1/1 keys</div>
+        </div>
+        <span style="font-size:14px;font-weight:700;color:var(--gray);">—</span>
+      </div>
+    </div>
+    <!-- Strategy switcher on mobile -->
+    <div style="margin-top:16px;padding:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:var(--radius-md);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:12px;color:var(--muted);">当前策略</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);">⚡ 延迟优先</div>
+        </div>
+        <span style="padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;">切换</span>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:10px;color:var(--dim);text-align:center;">
+      移动端不显示流程图，使用列表卡片展示 · 可拖拽排序优先级
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

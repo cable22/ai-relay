@@ -12,13 +12,15 @@
 import { NextRequest } from 'next/server';
 import { validateAuth, relayRequest, validateBase64ImageSizes } from '@/lib/relay';
 import { RelayError } from '@/lib/errors';
-import { KVUsageStorage, createUsageEvent } from '@/lib/usage';
+import { KVUsageStorage, createUsageEvent, getBatchRecorder } from '@/lib/usage';
 import { recordRequestLog } from '@/lib/observability/request-logs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const usageStorage = new KVUsageStorage();
+const batchRecorder = getBatchRecorder();
+batchRecorder.setStorage(usageStorage);
 
 /** Rough chars-per-token estimate for fallback */
 const CHARS_PER_TOKEN = 4;
@@ -67,7 +69,7 @@ function wrapStreamWithUsageTracking(
       latencyMs,
       isStream: true,
     });
-    await usageStorage.record(event);
+    batchRecorder.record(event);
     await recordRequestLog({
       traceId,
       timestamp: new Date().toISOString(),
@@ -350,7 +352,7 @@ export async function POST(request: NextRequest) {
             latencyMs,
             isStream: false,
           });
-          await usageStorage.record(event);
+          batchRecorder.record(event);
           await recordRequestLog({
             traceId,
             timestamp: new Date().toISOString(),
