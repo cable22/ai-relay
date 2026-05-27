@@ -197,15 +197,6 @@ export async function resolveFallbackModel(originalModel: string, targetProvider
       return 'deepseek-v4-flash';
 
     case 'xiaomi_sgp_coding':
-      // SGP has both mimo-v2.5-pro-sgp and mimo-v2.5-flash-sgp
-      if (
-        lowerModel.includes('mini') ||
-        lowerModel.includes('haiku') ||
-        lowerModel.includes('flash') ||
-        lowerModel.includes('3.5-turbo')
-      ) {
-        return 'mimo-v2.5-flash-sgp';
-      }
       if (lowerModel.includes('mimo-v2.5') && !lowerModel.includes('pro')) {
         return 'mimo-v2.5-sgp';
       }

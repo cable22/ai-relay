@@ -63,7 +63,6 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     modelMapping: {
       'mimo-v2.5-pro-coding': 'mimo-v2.5-pro',
       'mimo-v2.5-pro-sgp': 'mimo-v2.5-pro',
-      'mimo-v2.5-flash-sgp': 'mimo-v2.5-flash',
       'mimo-v2.5-coding': 'mimo-v2.5',
       'mimo-v2.5-sgp': 'mimo-v2.5',
     },
@@ -76,19 +75,17 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     name: 'xiaomi_sgp_coding',
     displayName: 'MiMo SGP (Coding Plan)',
     baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
-    modelPrefixes: ['mimo-v2.5-pro-sgp', 'mimo-v2.5-flash-sgp', 'mimo-v2.5-sgp'],
+    modelPrefixes: ['mimo-v2.5-pro-sgp', 'mimo-v2.5-sgp'],
     headerFormat: 'azure',
     envKeyField: 'XIAOMIMIMO_SGP_CODING_KEYS',
     envBaseUrlField: 'XIAOMIMIMO_SGP_CODING_BASE_URL',
     modelMapping: {
       'mimo-v2.5-pro-sgp': 'mimo-v2.5-pro',
-      'mimo-v2.5-flash-sgp': 'mimo-v2.5-flash',
       'mimo-v2.5-sgp': 'mimo-v2.5',
     },
     models: [
       { id: 'mimo-v2.5-sgp', displayName: 'MiMo v2.5 (SGP Coding)', contextWindow: 128000, maxOutput: 16384, supportsStream: true, supportsVision: true, supportsTools: true },
       { id: 'mimo-v2.5-pro-sgp', displayName: 'MiMo v2.5 Pro (SGP Coding)', contextWindow: 128000, maxOutput: 16384, supportsStream: true, supportsVision: true, supportsTools: true },
-      { id: 'mimo-v2.5-flash-sgp', displayName: 'MiMo v2.5 Flash (SGP Coding)', contextWindow: 128000, maxOutput: 16384, supportsStream: true, supportsVision: true },
     ],
   },
   xiaomi_coding: {
