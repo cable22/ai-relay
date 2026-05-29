@@ -20,6 +20,7 @@ export { DEFAULT_ROUTING_CONFIG } from './types';
 export {
   smartRoute,
   getRoutingConfig,
+  isSmartRoutingConfigured,
   saveRoutingConfig,
   recordProviderResult,
   getProviderHealth,

@@ -82,6 +82,16 @@ export async function getRoutingConfig(): Promise<RoutingConfig> {
 }
 
 /**
+ * Smart routing is considered configured only after the routing config has
+ * been explicitly saved. The default config has updatedAt = 0 and should not
+ * add KV latency reads to the main request path.
+ */
+export async function isSmartRoutingConfigured(): Promise<boolean> {
+  const config = await getRoutingConfig();
+  return config.updatedAt > 0;
+}
+
+/**
  * Save routing config to KV and update cache.
  */
 export async function saveRoutingConfig(config: Partial<RoutingConfig>): Promise<RoutingConfig> {
