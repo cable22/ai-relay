@@ -1030,22 +1030,7 @@ export function tryDecodeBase64(str: string): string {
 export async function exportBackupData(): Promise<Record<string, any>> {
   const kv = await getKV();
   if (!kv) {
-    return {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      customProviders: {},
-      keys: {},
-      fallbacks: {},
-      quota: null,
-      modelAliases: { aliases: {}, hidden: [] },
-      priorityRules: [],
-      webhooks: {
-        webhooks: [],
-        alertThresholds: [],
-        reportTime: '21:00',
-        reportTimezone: 'Asia/Shanghai',
-      }
-    };
+    throw new Error('KV storage not configured');
   }
 
   // 1. Get custom providers
