@@ -16,7 +16,7 @@ import {
 } from '@/lib/smart-routing';
 import type { RoutingConfig, RoutingStrategy } from '@/lib/smart-routing';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {

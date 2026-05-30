@@ -8,7 +8,7 @@ import { requireAdminAuth } from '@/lib/admin';
 import { getWebhookSettings } from '@/lib/admin/admin-config';
 import { sendTestMessage } from '@/lib/webhooks';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/admin/webhooks/test

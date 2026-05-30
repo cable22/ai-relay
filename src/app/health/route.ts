@@ -6,7 +6,7 @@
 import { getAllProviders } from '@/lib/providers';
 import { getKeyPoolStats, initAllKeyPools } from '@/lib/relay';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 const startTime = Date.now();
 

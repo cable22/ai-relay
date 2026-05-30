@@ -6,7 +6,7 @@ import { getKeyPoolStats, initAllKeyPools, getRateLimiterStats } from '@/lib/rel
 import { createUsageStorage } from '@/lib/usage/factory';
 import { getProviderHealthSnapshot } from '@/lib/health/storage';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 

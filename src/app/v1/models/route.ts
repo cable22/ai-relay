@@ -11,7 +11,7 @@ import { getModelAliasConfig } from '@/lib/admin/admin-config';
 import { getKeyPoolStats, initAllKeyPools, validateAuth } from '@/lib/relay';
 import type { ModelInfo } from '@/lib/providers/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 /** Timestamp when this relay was started (used as model creation date) */
 const RELAY_CREATED = Math.floor(Date.now() / 1000);

@@ -10,7 +10,7 @@ import { sendDailyReport } from '@/lib/webhooks';
 import { getWebhookSettings } from '@/lib/admin/admin-config';
 import { createUsageStorage } from '@/lib/usage/factory';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 
 

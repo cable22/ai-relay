@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/admin';
 import { saveAlertThresholds } from '@/lib/admin/admin-config';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 /**
  * PUT /api/admin/webhooks/thresholds

@@ -9,7 +9,7 @@ import { getAllProviders } from '@/lib/providers';
 import { hashKey, updateMemoryKeyPool } from '@/lib/relay';
 import { createUsageStorage } from '@/lib/usage/factory';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ provider: string }>;

@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/admin';
 import { generateTempKey } from '@/lib/relay';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/admin/temp-keys

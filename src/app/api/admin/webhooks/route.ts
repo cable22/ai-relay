@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/admin';
 import { getWebhookSettings, saveWebhookSettings, addWebhook, updateWebhook, deleteWebhook } from '@/lib/admin/admin-config';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const VALID_PLATFORMS = ['wecom', 'feishu', 'dingtalk', 'slack', 'generic'];

@@ -10,7 +10,7 @@ import { getAllProviders } from '@/lib/providers';
 import { buildHeaders } from '@/lib/relay/transform';
 import type { ModelInfo, ProviderConfig } from '@/lib/providers/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const maxDuration = 15;
 
 type DiscoverModelsBody = {

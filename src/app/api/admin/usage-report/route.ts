@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/admin';
 import { getUsageDailyReportsWithGaps, reportsToTrend } from '@/lib/usage/daily-report-store';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function todayUtc(): string {

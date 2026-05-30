@@ -8,7 +8,7 @@ import { getRateLimiterStats } from '@/lib/relay/rate-limiter';
 import { createUsageStorage } from '@/lib/usage/factory';
 import { getAllProviders } from '@/lib/providers';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 
 let cachedStatus: { expiresAt: number; response: unknown } | null = null;

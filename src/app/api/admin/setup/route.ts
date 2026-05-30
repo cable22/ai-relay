@@ -4,7 +4,7 @@ import { requireAdminAuth } from '@/lib/admin';
 import { getAllProviders } from '@/lib/providers';
 import { getKeyPoolStats, initAllKeyPools } from '@/lib/relay';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {

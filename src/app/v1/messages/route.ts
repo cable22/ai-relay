@@ -12,7 +12,7 @@ import { createUsageStorage } from '@/lib/usage/factory';
 import { recordRequestLog } from '@/lib/observability/request-logs';
 import type { AnthropicMessagesRequest } from '@/lib/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const batchRecorder = getBatchRecorder();

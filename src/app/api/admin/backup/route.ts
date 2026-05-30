@@ -6,7 +6,7 @@
 import { NextRequest } from 'next/server';
 import { requireAdminAuth, exportBackupData, importBackupData } from '@/lib/admin';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**

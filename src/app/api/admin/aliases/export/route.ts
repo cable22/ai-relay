@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/admin';
 import { getModelAliasConfig } from '@/lib/admin/admin-config';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SYSTEM_ALIASES: Record<string, string> = {

@@ -11,7 +11,7 @@ import { getKeyPoolStats, initAllKeyPools, getRelayApiKeys } from '@/lib/relay';
 import { resolveProvider } from '@/lib/providers';
 import type { ModelInfo } from '@/lib/providers/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 const RELAY_CREATED = Math.floor(Date.now() / 1000);
 

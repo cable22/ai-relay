@@ -11,7 +11,7 @@ import { getKeyPool } from '@/lib/relay/key-pool';
 import { buildHeaders } from '@/lib/relay/transform';
 import { recordHealthProbeResult } from '@/lib/health/storage';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 

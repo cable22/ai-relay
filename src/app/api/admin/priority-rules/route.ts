@@ -11,7 +11,7 @@ import {
   reorderPriorityRules,
 } from '@/lib/admin/priority-rules-core';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 function error(message: string, status = 400) {
   return Response.json({ error: { message, code: status } }, { status });

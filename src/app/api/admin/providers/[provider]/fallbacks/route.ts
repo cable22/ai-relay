@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminAuth, getFallbackChain, setFallbackChain, clearFallbackChain } from '@/lib/admin';
 import { getAllProviders } from '@/lib/providers';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ provider: string }>;

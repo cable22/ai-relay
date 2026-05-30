@@ -7,7 +7,7 @@ import { requireAdminAuth } from '@/lib/admin';
 import { createUsageStorage } from '@/lib/usage/factory';
 import { getUsageSamplingInfo } from '@/lib/usage/storage/kv-storage';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 

@@ -11,7 +11,7 @@ import { buildHeaders, transformToAnthropic } from '@/lib/relay/transform';
 import { getUpstreamUrl, resolveFallbackModel, resolveUpstreamModel } from '@/lib/providers/resolver';
 import type { ChatCompletionRequest } from '@/lib/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const maxDuration = 15; // Max 15s duration for API route
 
 type Params = Promise<{ provider: string }>;

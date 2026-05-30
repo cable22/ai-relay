@@ -3,7 +3,7 @@ import { requireAdminAuth } from '@/lib/admin';
 import { getModelAliasConfig, saveModelAliasConfig } from '@/lib/admin/admin-config';
 import { getAllProviders } from '@/lib/providers';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const ALIAS_RE = /^[a-z0-9_-]+$/;
