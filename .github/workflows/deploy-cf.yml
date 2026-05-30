@@ -163,7 +163,7 @@ jobs:
         run: |
           export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}"
           export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
-          pnpm exec wrangler pages deploy .vercel/output/static --project-name=ai-relay
+          pnpm exec wrangler pages deploy .open-next --project-name=ai-relay
 
       - name: Configure environment variables
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
