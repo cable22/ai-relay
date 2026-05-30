@@ -74,8 +74,7 @@ jobs:
             if grep -q "database_id" wrangler.toml; then
               sed -i.bak "s/database_id = .*/database_id = \"$DATABASE_ID\"/" wrangler.toml
             else
-              sed -i.bak "/database_name = \"ai-relay\"/a\\
-database_id = \"$DATABASE_ID\"" wrangler.toml
+              awk -v id="$DATABASE_ID" '/database_name = "ai-relay"/ {print; print "database_id = \"" id "\""; next}1' wrangler.toml > wrangler.toml.tmp && mv wrangler.toml.tmp wrangler.toml
             fi
           fi
 
@@ -96,8 +95,7 @@ database_id = \"$DATABASE_ID\"" wrangler.toml
             if grep -q "id = " wrangler.toml; then
               sed -i.bak "s/id = .*/id = \"$KV_ID\"/" wrangler.toml
             else
-              sed -i.bak "/binding = \"KV\"/a\\
-id = \"$KV_ID\"" wrangler.toml
+              awk -v id="$KV_ID" '/binding = "KV"/ {print; print "id = \"" id "\""; next}1' wrangler.toml > wrangler.toml.tmp && mv wrangler.toml.tmp wrangler.toml
             fi
           fi
 
