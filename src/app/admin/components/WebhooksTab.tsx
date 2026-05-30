@@ -144,7 +144,7 @@ export default function WebhooksTab({ apiKey, lang, providers, onRefreshData }: 
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [fetchSettings]);
 
   if (loadingSettings) {
     return (

@@ -74,7 +74,7 @@ export default function ModelKeyTest({
         setSelectedModelId('__custom__');
       }
     }
-  }, [selectedProviderId, providers]);
+  }, [selectedProviderId, providers, selectedModelId]);
 
   // Fetch keys for the current provider
   const fetchKeys = async (providerId: string) => {
@@ -116,7 +116,7 @@ export default function ModelKeyTest({
       setProviderKeys([]);
       setSelectedKeyHash('');
     }
-  }, [selectedProviderId]);
+  }, [selectedProviderId, fetchKeys]);
 
   const handleRunTest = async () => {
     if (!selectedProviderId || !activeModelId) return;

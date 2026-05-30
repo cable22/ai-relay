@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import LogoIcon from './components/LogoIcon';
 import OverviewTab from './components/OverviewTab';
 import KeysTab from './components/KeysTab';
@@ -418,7 +419,7 @@ export default function AdminPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <a
+          <Link
             href="/"
             style={{
               padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -429,7 +430,7 @@ export default function AdminPage() {
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.color = '#d1d5db'; }}
           >
             {t.navHome}
-          </a>
+          </Link>
           <button
             onClick={() => handleSetLang(lang === 'zh' ? 'en' : 'zh')}
             style={{

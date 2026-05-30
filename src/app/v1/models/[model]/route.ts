@@ -47,9 +47,10 @@ async function findModel(modelId: string): Promise<(ModelInfo & { owned_by: stri
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { model: string } }
+  { params }: { params: Promise<{ model: string }> }
 ) {
-  const modelId = decodeURIComponent(params.model);
+  const { model: modelParam } = await params;
+  const modelId = decodeURIComponent(modelParam);
 
   // Optional auth
   const authHeader = request.headers.get('authorization');
