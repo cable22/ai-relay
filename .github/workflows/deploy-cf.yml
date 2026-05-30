@@ -201,6 +201,3 @@ jobs:
           if [ -n "${{ secrets.CRON_SECRET }}" ]; then
             echo "${{ secrets.CRON_SECRET }}" | pnpm exec wrangler pages secret put CRON_SECRET --project-name=ai-relay
           fi
-
-          # Set CF_PAGES flag
-          echo "1" | pnpm exec wrangler pages secret put CF_PAGES --project-name=ai-relay
