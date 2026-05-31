@@ -132,6 +132,75 @@ curl -X POST https://your-project.vercel.app/v1/chat/completions \
 🎉 **Done!** You now have a multi-provider AI API relay with automatic failover.
 
 <details>
+<summary><strong>☁️ Deploy to Cloudflare Pages (fully automated)</strong></summary>
+
+**Prerequisites:** [Cloudflare account](https://dash.cloudflare.com/sign-up) (free) + GitHub repository
+
+> ⚠️ **Important:** GitHub Secrets must be configured before pushing, or the deployment will fail.
+
+**Step 1 — Fork the repo and configure GitHub Secrets**
+
+In your GitHub repository, go to **Settings → Secrets and variables → Actions → Repository secrets** (not Environment secrets) and add:
+
+| Secret | Description | Required |
+|--------|-------------|----------|
+| `CLOUDFLARE_API_TOKEN` | CF API Token (needs Pages:Edit + D1:Edit + KV:Edit permissions) | ✅ |
+| `CLOUDFLARE_ACCOUNT_ID` | CF Account ID (found in the CF Dashboard sidebar) | ✅ |
+| `RELAY_API_KEY` | Client request auth key (choose any strong secret) | ✅ |
+| `RELAY_ADMIN_KEY` | Admin login key (optional, defaults to `RELAY_API_KEY`) | ⬜ |
+| `RELAY_SIGNING_SECRET` | Temp key signing secret (optional, defaults to `RELAY_API_KEY`) | ⬜ |
+| `CRON_SECRET` | Cron job auth key (optional, auto-generated if omitted) | ⬜ |
+
+> **How to get a Cloudflare API Token:**
+> 1. Visit [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)
+> 2. Click **Create Token** → **Create Custom Token**
+> 3. Set permissions: Account → Cloudflare Pages → Edit, Account → D1 → Edit, Account → Workers KV Storage → Edit
+> 4. Copy the generated token
+>
+> **How to get your Account ID:**
+> 1. Visit [Cloudflare Dashboard](https://dash.cloudflare.com/)
+> 2. Your **Account ID** is shown in the right sidebar
+>
+> **⚠️ Note:** Add these to **Repository secrets**, not Environment secrets. Environment secrets are only available in specific deployment environments and will cause the workflow to fail.
+
+**Also add the following in the Variables tab (required for Cron jobs):**
+
+In **Settings → Secrets and variables → Actions → Variables**, add:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DEPLOY_URL` | Your deployed app URL, e.g. `https://ai-relay.pages.dev` (used by Cron jobs to call health probe and usage aggregation endpoints) | ✅ |
+
+> **Note:** `DEPLOY_URL` is a Repository Variable (not a Secret) and must be added in the Variables tab. Without it, Cron jobs will fail with `curl exit code 3` because the URL resolves to an empty string.
+
+**Step 2 — Push to trigger deployment**
+
+Push to the `main` branch — GitHub Actions will automatically:
+
+✅ Validate that required GitHub Secrets are configured  
+✅ Auto-detect and create the D1 database (`ai-relay`)  
+✅ Auto-detect and create the KV namespace (`ai-relay`)  
+✅ Run D1 migrations (create tables)  
+✅ Build and deploy to Cloudflare Pages  
+✅ Configure environment variables  
+✅ Bind KV/D1 resources  
+
+**Step 3 — Verify deployment**
+
+```bash
+curl https://ai-relay.pages.dev/health
+# → {"status":"ok"}
+```
+
+Visit `https://ai-relay.pages.dev/admin` to start using it.
+
+> **Storage:** CF deployment uses Cloudflare KV (config data) + D1 (usage stats). Free tier limits: D1 writes 100K rows/day (~30–50K AI requests/day), KV writes 1,000/day (config changes only — normal usage won't hit this).
+>
+> **Cron:** CF Pages Cron Triggers run via the `scheduled()` handler in `worker.ts`, not HTTP routes. Default schedule: daily quota reset at 00:00 UTC, health probe at 00:05 UTC.
+
+</details>
+
+<details>
 <summary><strong>📦 Local Development</strong></summary>
 
 ```bash

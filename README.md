@@ -166,6 +166,16 @@ curl -X POST https://你的项目.vercel.app/v1/chat/completions \
 >
 > **⚠️ 注意：** 必须添加到 **Repository secrets**，不是 Environment secrets。Environment secrets 只在特定环境部署时可用，会导致 workflow 无法读取。
 
+**同时，在 Variables 标签页添加以下变量（Cron 定时任务必需）：**
+
+在 **Settings → Secrets and variables → Actions → Variables** 中添加：
+
+| Variable | 说明 | 必填 |
+|----------|------|------|
+| `DEPLOY_URL` | 部署完成后的访问地址，例如 `https://ai-relay.pages.dev`（Cron 任务通过此地址发起健康探测和用量聚合请求） | ✅ |
+
+> **说明：** `DEPLOY_URL` 是 Repository Variable（不是 Secret），需要在 Variables 标签页单独添加。未配置时 Cron 任务会因 URL 为空而失败（curl exit code 3）。
+
 **第 2 步 — 推送触发部署**
 
 推送到 `main` 分支，GitHub Actions 会自动完成所有配置：
