@@ -35,6 +35,57 @@ export function transformToAnthropic(body: ChatCompletionRequest): Record<string
 }
 
 /**
+ * Default User-Agent presented to upstream when the client's own UA is
+ * missing or belongs to a generic scripting library that some upstreams
+ * block (e.g. `python-requests`, `curl`). Overridable via env.
+ */
+const DEFAULT_UPSTREAM_USER_AGENT = `ai-relay/${process.env.npm_package_version ?? '2.9.0'}`;
+
+/**
+ * Lowercased prefixes/substrings of generic scripting-client User-Agents that
+ * some upstream providers reject outright. These carry no useful identity, so
+ * we replace them with the relay's own UA rather than forwarding them.
+ */
+const BLOCKED_USER_AGENT_PATTERNS = [
+  'python-requests',
+  'python-httpx',
+  'python-urllib',
+  'aiohttp',
+  'go-http-client',
+  'curl/',
+  'wget/',
+  'okhttp',
+  'node-fetch',
+  'axios/',
+  'undici',
+  'java/',
+  'libwww-perl',
+];
+
+/**
+ * Decide which User-Agent to present to the upstream provider.
+ *
+ * A legitimate client UA (e.g. `claude-cli/1.2.3`) is forwarded unchanged so
+ * the upstream sees the real caller. A missing UA, or one belonging to a
+ * generic scripting library known to be blocked, is replaced with a neutral
+ * relay UA so the request is not rejected before it reaches the model.
+ */
+export function resolveUpstreamUserAgent(clientUserAgent?: string): string {
+  const ua = clientUserAgent?.trim();
+  if (!ua) return relayDefaultUserAgent();
+
+  const lower = ua.toLowerCase();
+  if (BLOCKED_USER_AGENT_PATTERNS.some(p => lower.includes(p))) {
+    return relayDefaultUserAgent();
+  }
+  return ua;
+}
+
+function relayDefaultUserAgent(): string {
+  return process.env.RELAY_DEFAULT_USER_AGENT?.trim() || DEFAULT_UPSTREAM_USER_AGENT;
+}
+
+/**
  * Build upstream request headers based on provider format.
  */
 export function buildHeaders(
@@ -60,9 +111,7 @@ export function buildHeaders(
     headers['Accept'] = 'text/event-stream';
   }
 
-  if (userAgent) {
-    headers['User-Agent'] = userAgent;
-  }
+  headers['User-Agent'] = resolveUpstreamUserAgent(userAgent);
 
   return headers;
 }

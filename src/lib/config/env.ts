@@ -35,6 +35,11 @@
  *   RELAY_DAILY_LIMIT    — Max requests per day (0 = unlimited)
  *   RELAY_MONTHLY_LIMIT  — Max requests per month (0 = unlimited)
  *
+ * [Upstream Request] (optional)
+ *   RELAY_DEFAULT_USER_AGENT — User-Agent presented to upstream when the client
+ *                              UA is missing or a blocked generic script UA
+ *                              (e.g. python-requests). Defaults to ai-relay/<version>.
+ *
  * [Postgres] (optional — for S1+ when Drizzle is active)
  *   DATABASE_URL         — Postgres connection string (e.g. postgres://user:pass@host:5432/db)
  *
