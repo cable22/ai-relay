@@ -123,7 +123,9 @@ export default function ProviderConfigEditor({
                       baseUrl: currentProviderObj.baseUrl,
                       headerFormat: currentProviderObj.headerFormat || 'openai',
                       modelPrefixes: currentProviderObj.modelPrefixes || [],
-                      models: currentProviderObj.models || []
+                      models: currentProviderObj.models || [],
+                      keyCount: currentProviderObj.keyCount || 0,
+                      userAgent: currentProviderObj.userAgent,
                     });
                     setCustomProviderModalOpen(true);
                   }

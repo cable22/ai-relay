@@ -23,6 +23,7 @@ interface CustomProviderModalProps {
   onSaveCustomProvider: (provider: any) => Promise<void>;
   onTestCustomProvider?: (provider: any, apiKeyValue: string, modelId?: string) => Promise<any>;
   onFetchProviderModels?: (provider: any, apiKeyValue: string) => Promise<{ models: any[] }>;
+  providerKeys?: Array<{ hash: string; masked: string; source: string }> | null;
 }
 
 export default function CustomProviderModal({
@@ -36,6 +37,7 @@ export default function CustomProviderModal({
   onSaveCustomProvider,
   onTestCustomProvider,
   onFetchProviderModels,
+  providerKeys,
 }: CustomProviderModalProps) {
   // Local states for custom provider form
   const [formId, setFormId] = useState('');
@@ -47,6 +49,8 @@ export default function CustomProviderModal({
   const [formModels, setFormModels] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('openai');
   const [apiKeyValue, setApiKeyValue] = useState('');
+  const [selectedKeyHash, setSelectedKeyHash] = useState('');
+  const [useExistingKey, setUseExistingKey] = useState(false);
   const [testModelId, setTestModelId] = useState('');
   const [testState, setTestState] = useState<{ status: 'idle' | 'testing' | 'success' | 'error'; message: string }>({
     status: 'idle',
@@ -78,6 +82,7 @@ export default function CustomProviderModal({
     if (editingCustomProvider) {
       setSelectedTemplateId('custom');
       setApiKeyValue('');
+      setSelectedKeyHash('');
       setTestState({ status: 'idle', message: '' });
       setModelFetchState({ status: 'idle', message: '' });
       setFormId(editingCustomProvider.id || editingCustomProvider.name || '');
@@ -88,6 +93,13 @@ export default function CustomProviderModal({
       setFormUserAgent(editingCustomProvider.userAgent || '');
       setFormModels(editingCustomProvider.models || []);
       setFetchedProviderModels([]);
+
+      // Check if there are existing keys
+      const hasExistingKeys = !!(providerKeys && providerKeys.length > 0);
+      setUseExistingKey(hasExistingKeys);
+      if (hasExistingKeys) {
+        setSelectedKeyHash(providerKeys[0].hash);
+      }
 
       // Pre-fill test model from existing models
       const existingModels = editingCustomProvider.models || [];
@@ -106,12 +118,14 @@ export default function CustomProviderModal({
       setFormUserAgent('');
       setFormModels([]);
       setApiKeyValue('');
+      setSelectedKeyHash('');
+      setUseExistingKey(false);
       setTestModelId(form.modelPrefixes[0] ? `${form.modelPrefixes[0]}demo` : '');
       setTestState({ status: 'idle', message: '' });
       setModelFetchState({ status: 'idle', message: '' });
       setFetchedProviderModels([]);
     }
-  }, [editingCustomProvider, customProviderModalOpen]);
+  }, [editingCustomProvider, customProviderModalOpen, providerKeys]);
 
   // Model helper callbacks
   const handleFormAddModel = () => {
@@ -204,13 +218,20 @@ export default function CustomProviderModal({
       setModelFetchState({ status: 'error', message: providerValidation });
       return;
     }
-    if (apiKeyValidation) {
-      setModelFetchState({ status: 'error', message: apiKeyValidation });
+
+    // Determine which key to use
+    const keyToUse = (editingCustomProvider && useExistingKey && selectedKeyHash)
+      ? `hash:${selectedKeyHash}`
+      : apiKeyValue.trim();
+
+    if (!keyToUse || (keyToUse.indexOf('hash:') !== 0 && apiKeyValidation)) {
+      setModelFetchState({ status: 'error', message: apiKeyValidation || 'missing-api-key' });
       return;
     }
+
     setModelFetchState({ status: 'loading', message: helperText.fetchingModels });
     try {
-      const result = await onFetchProviderModels(draftProvider, apiKeyValue.trim());
+      const result = await onFetchProviderModels(draftProvider, keyToUse);
       const models = Array.isArray(result?.models) ? result.models : [];
       setFetchedProviderModels(models);
       setModelFetchState({
@@ -231,13 +252,20 @@ export default function CustomProviderModal({
       setTestState({ status: 'error', message: providerValidation });
       return;
     }
-    if (apiKeyValidation) {
-      setTestState({ status: 'error', message: apiKeyValidation });
+
+    // Determine which key to use
+    const keyToUse = (editingCustomProvider && useExistingKey && selectedKeyHash)
+      ? `hash:${selectedKeyHash}`
+      : apiKeyValue.trim();
+
+    if (!keyToUse || (keyToUse.indexOf('hash:') !== 0 && apiKeyValidation)) {
+      setTestState({ status: 'error', message: apiKeyValidation || 'missing-api-key' });
       return;
     }
+
     setTestState({ status: 'testing', message: lang === 'zh' ? '测试中...' : 'Testing...' });
     try {
-      await onTestCustomProvider(draftProvider, apiKeyValue.trim(), testModelId.trim() || undefined);
+      await onTestCustomProvider(draftProvider, keyToUse, testModelId.trim() || undefined);
       setTestState({ status: 'success', message: lang === 'zh' ? '连通性测试通过' : 'Connectivity test passed' });
     } catch (error: any) {
       setTestState({ status: 'error', message: error?.message || (lang === 'zh' ? '连通性测试失败' : 'Connectivity test failed') });
@@ -335,7 +363,7 @@ export default function CustomProviderModal({
           backgroundColor: 'rgba(15, 23, 42, 0.45)',
           border: '1px solid rgba(255,255,255,0.07)',
         }}>
-          <div>
+          <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', color: '#9ca3af', marginBottom: '0.3rem' }}>
               {helperText.apiKey}
               {editingCustomProvider && editingCustomProvider.keyCount > 0 && (
@@ -344,23 +372,101 @@ export default function CustomProviderModal({
                 </span>
               )}
             </label>
-            <input
-              type="password"
-              placeholder={editingCustomProvider ? (lang === 'zh' ? '可选：测试新密钥' : 'Optional: test new key') : 'sk-...'}
-              value={apiKeyValue}
-              onChange={(e) => setApiKeyValue(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.55rem 0.75rem',
-                borderRadius: '6px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                backgroundColor: 'rgba(0, 0, 0, 0.25)',
-                color: '#fff',
-                fontSize: '0.9rem',
-                boxSizing: 'border-box',
-              }}
-            />
-            {editingCustomProvider && editingCustomProvider.keyCount > 0 && (
+            {editingCustomProvider && providerKeys && providerKeys.length > 0 ? (
+              <>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setUseExistingKey(true)}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      border: useExistingKey ? '1px solid rgba(96, 165, 250, 0.5)' : '1px solid rgba(255,255,255,0.08)',
+                      backgroundColor: useExistingKey ? 'rgba(37, 99, 235, 0.18)' : 'rgba(0, 0, 0, 0.15)',
+                      color: useExistingKey ? '#60a5fa' : '#9ca3af',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: useExistingKey ? 600 : 400,
+                    }}
+                  >
+                    {lang === 'zh' ? '选择已有密钥' : 'Use existing key'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUseExistingKey(false)}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      border: !useExistingKey ? '1px solid rgba(96, 165, 250, 0.5)' : '1px solid rgba(255,255,255,0.08)',
+                      backgroundColor: !useExistingKey ? 'rgba(37, 99, 235, 0.18)' : 'rgba(0, 0, 0, 0.15)',
+                      color: !useExistingKey ? '#60a5fa' : '#9ca3af',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: !useExistingKey ? 600 : 400,
+                    }}
+                  >
+                    {lang === 'zh' ? '输入新密钥' : 'Enter new key'}
+                  </button>
+                </div>
+                {useExistingKey ? (
+                  <select
+                    value={selectedKeyHash}
+                    onChange={(e) => setSelectedKeyHash(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {providerKeys.map((key) => (
+                      <option key={key.hash} value={key.hash}>
+                        {key.masked} ({key.source})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="password"
+                    placeholder="sk-..."
+                    value={apiKeyValue}
+                    onChange={(e) => setApiKeyValue(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                )}
+              </>
+            ) : (
+              <input
+                type="password"
+                placeholder={editingCustomProvider ? (lang === 'zh' ? '可选：测试新密钥' : 'Optional: test new key') : 'sk-...'}
+                value={apiKeyValue}
+                onChange={(e) => setApiKeyValue(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box',
+                }}
+              />
+            )}
+            {editingCustomProvider && editingCustomProvider.keyCount > 0 && !providerKeys?.length && (
               <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.35rem' }}>
                 {lang === 'zh'
                   ? '编辑时无需重新输入已有密钥，如需测试新密钥请在此输入'

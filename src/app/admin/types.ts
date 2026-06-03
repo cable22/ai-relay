@@ -26,6 +26,7 @@ export interface ProviderInfo {
   baseUrl?: string;
   headerFormat?: 'openai' | 'anthropic' | 'azure';
   envKeyField?: string;
+  userAgent?: string;
   errors?: Record<string, number>;
   keyErrors?: Array<{
     keyHash: string;

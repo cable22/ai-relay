@@ -187,6 +187,7 @@ export default function KeysTab(props: KeysTabProps) {
         onSaveCustomProvider={onSaveCustomProvider}
         onTestCustomProvider={onTestCustomProvider}
         onFetchProviderModels={onFetchProviderModels}
+        providerKeys={providerKeys}
       />
     </div>
   );
