@@ -8,6 +8,41 @@
 
 （暂无）
 
+## [2.11.0] - 2026-06-04
+
+### Added
+- **Cherry Studio 链接导入 Provider**：支持通过 Cherry Studio 链接一键导入 Provider 配置，简化多 Provider 管理流程。
+- **已有 Key 选择支持**：自定义 Provider 编辑弹窗中支持选择已有 API Key，无需重复输入。
+- **Key 数量指示器**：Provider 编辑 UX 优化，展示当前 Key 数量便于管理。
+- **Provider 自定义 User-Agent**：支持为每个 Provider 单独配置 User-Agent，避免上游服务商因默认 SDK 标识而封禁请求。
+- **Provider 默认模型测试**：API Key 测试时自动使用 Provider 特定的默认模型。
+- **精确模型优先级路由**：支持精确匹配模型名称的优先级路由，以及 Hash Key 解析。
+- **Provider 导入暂存草稿**：导入 Provider 配置时先暂存为草稿，确认后再保存。
+- **模型批量删除**：支持批量移除模型列表，提升管理效率。
+- **User-Agent 透传与清理**：将客户端 User-Agent 透传至上游 Provider，清理 fallback 引用中的冗余字段。
+
+### Fixed
+- **上游请求重试与 User-Agent 兼容**：上游请求失败时使用浏览器兼容的 User-Agent 重试。
+- **Provider Key 测试重试与错误处理**：改进 Key 测试的重试逻辑和错误消息展示。
+- **NewAPI 导入 Base URL 与模型发现回退**：修复 NewAPI 导入时的 Base URL 拼接和模型发现 fallback 逻辑。
+- **UI 错误消息展示**：改进上游返回 HTML 响应时的错误消息展示与摘要处理。
+
+## [2.10.0] - 2026-06-03
+
+### Added
+- **可配置 API Key 最小长度**：新增 `RELAY_API_KEY_MIN_LENGTH` 环境变量，支持自定义 API Key 最小长度要求。
+- **客户端 User-Agent 透传**：将客户端 User-Agent 转发至上游 Provider，提升请求兼容性。
+
+### Changed
+- **流式用量跟踪性能优化**：跳过流式传输中的逐 chunk JSON.parse，降低 CPU 开销。
+
+### Fixed
+- **D1 UUID 恢复**：修复重新部署时 D1 数据库已存在导致的 UUID 恢复问题。
+- **KV Namespace ID 恢复**：修复重新部署时 KV namespace title 已存在导致的 ID 恢复问题。
+- **上游 User-Agent 清理**：清理上游请求中的 User-Agent，避免 Provider 因 SDK 标识而封禁。
+- **中性 SDK User-Agent 默认值**：默认 User-Agent 不再暴露 Relay 身份。
+- **上游非 JSON 响应解析**：改进 Provider Key 测试时对非 JSON 响应体的错误解析。
+
 ## [2.9.0] - 2026-06-01
 
 ### Added
