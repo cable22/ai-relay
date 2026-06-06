@@ -41,7 +41,7 @@
 | **怎么部署？** | Vercel：点按钮填变量，2 分钟上线 · Cloudflare：Fork + 配 Secrets，push 即部署 |
 | **要服务器吗？** | 不需要 VPS，不需要 Docker，不需要后端运维 |
 | **能免费跑吗？** | 个人 / 小团队可从免费层开始；Vercel + Upstash（每月 50 万次 KV 操作）或 Cloudflare（D1 + KV 免费层）均可零成本启动 |
-| **接入复杂吗？** | OpenAI SDK 只改 `base_url`，继续使用 `/v1/chat/completions` |
+| **接入复杂吗？** | OpenAI SDK 只改 `base_url`，继续使用 `/v1/chat/completions` |.
 
 ## 目录
 
