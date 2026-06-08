@@ -20,7 +20,7 @@
 
 <p><strong><a href="https://vercel.com/new/clone?repository-url=https://github.com/MoyuFamily/ai-relay&env=RELAY_API_KEY,RELAY_ADMIN_KEY,RELAY_SIGNING_SECRET&envDescription=API%20authentication%20keys%20(required%20for%20security)&envLink=https://github.com/MoyuFamily/ai-relay#environment-variables">👉 立即一键部署</a></strong> · <a href="#-一键部署2-分钟上线你的-ai-api-网关">查看部署步骤</a> · <a href="#-部署到-cloudflare-pages全自动">Cloudflare 部署指南</a></p>
 
-[![Version](https://img.shields.io/badge/Version-2.11.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.11.1-green.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
 [![Edge Runtime](https://img.shields.io/badge/Edge_Runtime-⚡-black?logo=vercel)](https://vercel.com/docs/functions/edge-functions)
@@ -56,6 +56,7 @@
 - [通知与告警](#-通知与告警)
 - [使用场景](#-使用场景)
 - [贡献指南](#-贡献指南)
+- [常见问题 (FAQ)](#-常见问题-faq)
 - [更新日志](#-更新日志)
 - [许可证](#-许可证)
 
@@ -135,7 +136,7 @@ curl -X POST https://你的项目.vercel.app/v1/chat/completions \
 
 🎉 **完成！** 你已经拥有一个支持多 Provider、自动故障转移的 AI API 中转服务。
 
-<details>
+<details id="-部署到-cloudflare-pages全自动">
 <summary><strong>☁️ 部署到 Cloudflare Pages（全自动）</strong></summary>
 
 **前置条件：** [Cloudflare 账号](https://dash.cloudflare.com/sign-up)（免费）+ GitHub 仓库
@@ -478,6 +479,10 @@ Client → CF Pages Worker (全球分发, <50ms 延迟)
 - [Vercel](https://vercel.com) — Edge Runtime + KV 存储
 - [OpenAI](https://platform.openai.com) — OpenAI 兼容 API 标准
 - [Linux Do](https://linux.do/) — 温暖的开发者社区，AI Relay 的灵感来源
+
+## ❓ 常见问题 (FAQ)
+
+使用过程中遇到问题？请查看 [FAQ 文档](docs/FAQ.md)，包含部署、配置、使用等方面的常见问题及解决方案。
 
 ## 📝 更新日志
 
